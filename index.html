@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sari-Sari Store Inventory</title>
+    <style>
+        table, th, td { border: 1px solid black; border-collapse: collapse; padding: 5px; }
+        input { padding: 5px; margin: 5px; }
+        button { padding: 5px 10px; margin: 2px; }
+    </style>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<h2>Sari-Sari Store Inventory</h2>
+
+<!-- Add Product -->
+<h3>Add Product</h3>
+<form id="addForm">
+    Name: <input type="text" id="name" required>
+    Barcode: <input type="text" id="barcode" required>
+    Category: <input type="text" id="category">
+    Price: <input type="number" id="price" step="0.01" required>
+    <button type="submit">Add</button>
+</form>
+
+<!-- Scan Barcode -->
+<h3>Scan Barcode</h3>
+<input type="text" id="scanBarcode" placeholder="Scan barcode here">
+<button onclick="scanProduct()">Scan</button>
+<p id="scanResult"></p>
+
+<!-- Product List -->
+<h3>Products</h3>
+<table id="productTable">
+    <thead>
+        <tr>
+            <th>Name</th><th>Barcode</th><th>Category</th><th>Price</th><th>Actions</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<script>
+    // ---------------- Load Products ----------------
+    function loadProducts(){
+        productsRef.get().then(snapshot=>{
+            const tbody = document.querySelector('#productTable tbody');
+            tbody.innerHTML = '';
+            snapshot.forEach(doc=>{
+                const p = doc.data();
+                tbody.innerHTML += `<tr>
+                    <td>${p.name}</td>
+                    <td>${p.barcode}</td>
+                    <td>${p.category}</td>
+                    <td>${p.price}</td>
+                    <td>
+                        <button onclick="editProduct('${doc.id}')">Edit</button>
+                        <button onclick="deleteProduct('${doc.id}')">Delete</button>
+                    </td>
+                </tr>`;
+            });
+        });
+    }
+
+    // ---------------- Add Product ----------------
+    document.getElementById('addForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        const name = document.getElementById('name').value;
+        const barcode = document.getElementById('barcode').value;
+        const category = document.getElementById('category').value;
+        const price = parseFloat(document.getElementById('price').value);
+
+        productsRef.add({name, barcode, category, price}).then(()=>{
+            this.reset();
+            loadProducts();
+        });
+    });
+
+    // ---------------- Scan Product ----------------
+    function scanProduct(){
+        const barcode = document.getElementById('scanBarcode').value;
+        productsRef.where('barcode','==',barcode).get().then(snapshot=>{
+            if(snapshot.empty){
+                document.getElementById('scanResult').innerText = "Product not found";
+            } else {
+                snapshot.forEach(doc=>{
+                    const p = doc.data();
+                    document.getElementById('scanResult').innerText = `Name: ${p.name}, Price: ${p.price}`;
+                });
+            }
+        });
+    }
+
+    // ---------------- Edit Product ----------------
+    function editProduct(id){
+        productsRef.doc(id).get().then(doc=>{
+            const p = doc.data();
+            const name = prompt("New name:", p.name);
+            const barcode = prompt("New barcode:", p.barcode);
+            const category = prompt("New category:", p.category);
+            const price = prompt("New price:", p.price);
+
+            productsRef.doc(id).update({name, barcode, category, price: parseFloat(price)})
+                .then(()=> loadProducts());
+        });
+    }
+
+    // ---------------- Delete Product ----------------
+    function deleteProduct(id){
+        if(confirm("Delete this product?")){
+            productsRef.doc(id).delete().then(()=> loadProducts());
+        }
+    }
+
+    // Initial load
+    loadProducts();
+</script>
+<script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+  
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    const firebaseConfig = {
+      apiKey: "AIzaSyCMpCS58Alq9ia38l-ddJClKmVc7MCnCho",
+      authDomain: "myrna-store.firebaseapp.com",
+      projectId: "myrna-store",
+      storageBucket: "myrna-store.firebasestorage.app",
+      messagingSenderId: "406839597031",
+      appId: "1:406839597031:web:6d895953d43fd6698c0f42",
+      measurementId: "G-7J803JVE3F"
+    };
+  
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+  </script>
+</body>
+</html>
